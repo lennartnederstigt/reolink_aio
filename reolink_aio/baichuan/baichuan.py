@@ -28,6 +28,7 @@ from ..exceptions import (
 )
 from ..enums import BatteryEnum, DayNightEnum, HardwiredChimeTypeEnum
 from ..utils import reolink_time_to_datetime, to_reolink_time_id, datetime_to_reolink_time
+
 from .util import DEFAULT_BC_PORT, HEADER_MAGIC, AES_IV, EncType, PortType, decrypt_baichuan, encrypt_baichuan, md5_str_modern, http_cmd
 
 if TYPE_CHECKING:
@@ -1280,7 +1281,7 @@ class Baichuan:
         xml = xmls.SetDingDongCfg_XML.format(chime_id=chime_id, event_type=event_type, state=state, tone_id=tone_id)
         await self.send(cmd_id=487, channel=channel, body=xml)
 
-    async def get_ding_dong_ctrl(self, channel: int = -1) -> None:
+    async def get_ding_dong_ctrl(self, channel: int) -> None:
         """Get the DingDongCtrl info"""
         xml = xmls.GetDingDongCtrl_XML
         mess = await self.send(cmd_id=483, channel=channel, body=xml)
@@ -1288,20 +1289,23 @@ class Baichuan:
 
     async def set_ding_dong_ctrl(self, channel: int, chime_type: str | None = None, enable: bool | None = None) -> None:
         """Set the DingDongCtrl info"""
+        await self.get_ding_dong_ctrl(channel)
+
         enabled = int(enable) if enable is not None else int(self.hardwired_chime_enabled(channel))
         chime_type = chime_type if chime_type is not None else self.hardwired_chime_type(channel)
+        time = self._hardwired_chime_settings.get(channel, {}).get("time", 0)
 
         hardwired_chime_type_list = [val.value for val in HardwiredChimeTypeEnum]
         if chime_type not in hardwired_chime_type_list:
             raise InvalidParameterError(f"Baichuan host {self._host}: set_ding_dong_ctrl type {chime_type} not in {hardwired_chime_type_list}")
 
-        xml = xmls.SetDingDongCtrl_XML.format(chime_type=chime_type, enabled=enabled)
+        xml = xmls.SetDingDongCtrl_XML.format(chime_type=chime_type, enabled=enabled, time=time)
         mess = await self.send(cmd_id=483, channel=channel, body=xml)
         self._parse_hardwired_chime(mess, channel)
 
     def _parse_hardwired_chime(self, mess: str, channel: int) -> None:
         """Parse hardwired chime response"""
-        self._hardwired_chime_settings[channel] = self._get_keys_from_xml(mess, {"type": ("type", str), "bopen": ("enable", int)})
+        self._hardwired_chime_settings[channel] = self._get_keys_from_xml(mess, {"type": ("type", str), "bopen": ("enable", int), "time": ("time", int)})
 
     @http_cmd("QuickReplyPlay")
     async def QuickReplyPlay(self, **kwargs) -> None:
