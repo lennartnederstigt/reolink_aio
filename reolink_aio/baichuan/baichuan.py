@@ -26,7 +26,7 @@ from ..exceptions import (
     ReolinkTimeoutError,
     CredentialsInvalidError,
 )
-from ..enums import BatteryEnum, DayNightEnum, HardwiredChimeTypeEnum
+from ..enums import BatteryEnum, DayNightEnum, ExistingChimeTypeEnum
 from ..utils import reolink_time_to_datetime, to_reolink_time_id, datetime_to_reolink_time
 
 from .util import DEFAULT_BC_PORT, HEADER_MAGIC, AES_IV, EncType, PortType, decrypt_baichuan, encrypt_baichuan, md5_str_modern, http_cmd
